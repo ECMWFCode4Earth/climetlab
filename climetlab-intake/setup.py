@@ -23,7 +23,7 @@ setuptools.setup(
     url="https://github.com/ecmwf/climetlab-intake",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=["intake", "pandas"],
+    install_requires=["intake", "intake-xarray", "pandas"],
     zip_safe=True,
     entry_points={
         "climetlab.sources": ["intake = climetlab_intake:Intake"]

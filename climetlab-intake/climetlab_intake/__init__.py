@@ -8,5 +8,11 @@ class Intake(Source):
         pass
 
     def load_data(self, data):
-        data = intake.open_csv(data)
+        if data.endswith('.csv'):
+            data = intake.open_csv(data)
+        elif data.endswith('.nc'):
+            data = intake.open_netcdf(data)
+        elif data.endswith('.zarr'):
+            data = intake.open_zarr(data)
+
         return data
