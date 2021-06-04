@@ -16,3 +16,6 @@ class Intake(Source):
             data = intake.open_zarr(data)
 
         return data
+
+
+source = Intake()
