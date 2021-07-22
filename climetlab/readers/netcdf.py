@@ -16,9 +16,10 @@ from itertools import product
 import numpy as np
 import xarray as xr
 
+from climetlab.core import Base
 from climetlab.utils.bbox import BoundingBox
 
-from . import MultiReaders, Reader
+from . import Reader
 
 
 def as_datetime(self, time):
@@ -138,7 +139,7 @@ class DataSet:
         return self._bbox[(lat, lon)]
 
 
-class NetCDFField:
+class NetCDFField(Base):
     def __init__(self, path, ds, variable, slices):
 
         data_array = ds[variable]
@@ -180,20 +181,21 @@ class NetCDFField:
     def __repr__(self):
         return "NetCDFField[%r,%r]" % (self.variable, self.slices)
 
-    def to_datetime_list(self):
-        raise NotImplementedError
-
     def to_bounding_box(self):
         return BoundingBox(
             north=self.north, south=self.south, east=self.east, west=self.west
         )
 
 
-class MultiNetcdfReaders(MultiReaders):
-    engine = "netcdf4"
+# class MultiNetcdfReaders(GriddedMultiReaders):
+#     engine = "netcdf4"
 
 
 class NetCDFReader(Reader):
+
+    open_mfdataset_backend_kwargs = {}
+    open_mfdataset_engine = None
+
     def __init__(self, source, path):
         super().__init__(source, path)
         self.fields = None
@@ -225,6 +227,8 @@ class NetCDFReader(Reader):
 
     def _get_fields(self, ds):  # noqa C901
         # Select only geographical variables
+        has_lat = False
+        has_lon = False
 
         fields = []
 
@@ -312,16 +316,22 @@ class NetCDFReader(Reader):
 
         return fields
 
-    def to_xarray(self, *args, **kwargs):
-        # So we use the same code
-        return MultiNetcdfReaders([self]).to_xarray(*args, **kwargs)
+    def to_xarray(self, **kwargs):
+        return type(self).to_xarray_multi([self.path], **kwargs)
 
     @classmethod
-    def multi_merge(cls, readers):
-        assert all(isinstance(r, NetCDFReader) for r in readers)
-        return MultiNetcdfReaders(readers)
+    def to_xarray_multi(cls, paths, **kwargs):
+        import xarray as xr
+
+        options = dict()
+        options.update(kwargs)
+
+        return xr.open_mfdataset(
+            paths,
+            **options,
+        )
 
 
-def reader(source, path, magic):
+def reader(source, path, magic, deeper_check):
     if magic[:4] in (b"\x89HDF", b"CDF\x01", b"CDF\x02"):
         return NetCDFReader(source, path)

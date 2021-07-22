@@ -1,21 +1,30 @@
 Howtos
 ======
 
-TODO
+.. todo::
+
+  Add more standard recipes.
+
+How to install climetlab?
+-------------------------
 
 .. code-block:: bash
 
    pip install climetlab
 
-Before
+See the :ref:`installing instructions <installing>` for more details.
 
-.. command-output:: date +%Y%M%d
+How to access data?
+-------------------
 
-After
+As CliMetLab only provides a few demo datasets.
+To access a dataset with :py:func:`load_dataset`, the relevant plugin
+must be installed. See :ref:`accessing_data`.
 
-ddd
 
+How to help others to use my data?
+----------------------------------
 
-.. command-output:: date +%Y%M%d
-
-.. command-output:: ls -l
+Creating a CliMetLab plugin can be a solution to share some code along
+with the dataset that you are publishing/using.
+See the :ref:`plugin documentation <contributing-overview>`.

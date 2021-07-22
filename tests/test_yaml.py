@@ -15,16 +15,12 @@ import yaml
 
 
 def test_yaml():
-    print(yaml.__version__)
     yfile = os.path.dirname(__file__) + "/example.yaml"
-    print(yfile)
     with open(yfile) as f:
-        s = yaml.load(f.read(), Loader=yaml.SafeLoader)
-        print(s)
+        yaml.load(f.read(), Loader=yaml.SafeLoader)
 
 
 if __name__ == "__main__":
-    for k, f in sorted(globals().items()):
-        if k.startswith("test_") and callable(f):
-            print(k)
-            f()
+    from climetlab.testing import main
+
+    main(globals())

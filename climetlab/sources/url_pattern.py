@@ -7,20 +7,16 @@
 # nor does it submit to any jurisdiction.
 #
 
+from climetlab.sources.multi_url import MultiUrl
 from climetlab.utils.patterns import Pattern
 
-from .multi import MultiSource
-from .url import Url
 
-
-class UrlPattern(MultiSource):
-    def __init__(self, pattern, *args, **kwargs):
+class UrlPattern(MultiUrl):
+    def __init__(self, pattern, *args, filter=None, merger=None, force=False, **kwargs):
         urls = Pattern(pattern).substitute(*args, **kwargs)
-        if not isinstance(urls, list):
-            urls = [urls]
-
-        sources = [Url(url) for url in urls]
-        super().__init__(sources)
+        super().__init__(
+            urls, *args, filter=filter, merger=merger, force=force, **kwargs
+        )
 
 
 source = UrlPattern

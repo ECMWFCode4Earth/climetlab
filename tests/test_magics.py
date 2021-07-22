@@ -27,7 +27,6 @@ def test_exception():
 
 
 if __name__ == "__main__":
-    for k, f in sorted(globals().items()):
-        if k.startswith("test_") and callable(f):
-            print(k)
-            f()
+    from climetlab.testing import main
+
+    main(globals())

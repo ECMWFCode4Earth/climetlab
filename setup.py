@@ -23,7 +23,7 @@ def read(fname):
 
 
 version = None
-for line in read("climetlab/__init__.py").split("\n"):
+for line in read("climetlab/version.py").split("\n"):
     if line.startswith("__version__"):
         version = line.split("=")[-1].strip()[1:-1]
 
@@ -52,7 +52,7 @@ install_requires += [
     "requests",
     # "zarr",
     # "s3fs",
-    "xarray>=0.17.0",
+    "xarray>=0.18.2",
     "dask",
     "netcdf4",
     "cfgrib>=0.9.8.4",
@@ -64,6 +64,7 @@ install_requires += [
     "ecmwflibs>=0.1.2",
     "pdbufr",
     "pyodc",
+    "psutil",
     "toolz",
     "pyyaml",
     "markdown",
@@ -103,7 +104,6 @@ setuptools.setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

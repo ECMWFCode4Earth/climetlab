@@ -8,13 +8,13 @@
 #
 
 import json
-import os
 
 import ecmwfapi
 
 from climetlab.normalize import normalize_args
 
-from .base import APIKeyPrompt, FileSource
+from .file import FileSource
+from .prompt import APIKeyPrompt
 
 
 class MARSAPI(APIKeyPrompt):
@@ -78,10 +78,14 @@ def service(name):
 class MARSRetriever(FileSource):
     def __init__(self, **kwargs):
         request = self.request(**kwargs)
-        self.path = self.cache_file(request)
-        if not os.path.exists(self.path):
-            service("mars").execute(request, self.path + ".tmp")
-            os.rename(self.path + ".tmp", self.path)
+
+        def retrieve(target, request):
+            service("mars").execute(request, target)
+
+        self.path = self.cache_file(
+            retrieve,
+            request,
+        )
 
     @normalize_args(
         param="variable-list(mars)",
@@ -91,14 +95,29 @@ class MARSRetriever(FileSource):
     def request(self, **kwargs):
         return kwargs
 
-    def read_csv_options(self):
-        return dict(
+    def to_pandas(self, **kwargs):
+
+        pandas_read_csv_kwargs = dict(
             sep="\t",
             comment="#",
             # parse_dates=["report_timestamp"],
             skip_blank_lines=True,
             skipinitialspace=True,
             compression="zip",
+        )
+
+        pandas_read_csv_kwargs.update(kwargs.get("pandas_read_csv_kwargs", {}))
+
+        odc_read_odb_kwargs = dict(
+            # TODO
+        )
+
+        odc_read_odb_kwargs.update(kwargs.get("odc_read_odb_kwargs", {}))
+
+        return super().to_pandas(
+            pandas_read_csv_kwargs=pandas_read_csv_kwargs,
+            odc_read_odb_kwargs=odc_read_odb_kwargs,
+            **kwargs,
         )
 
 

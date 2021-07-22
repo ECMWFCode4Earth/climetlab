@@ -8,22 +8,38 @@
 #
 
 import itertools
-from collections import defaultdict
+import logging
+
+from climetlab.mergers import make_merger
+from climetlab.sources.empty import EmptySource
 
 from . import Source
 
+LOG = logging.getLogger(__name__)
+
 
 class MultiSource(Source):
-    def __init__(self, *sources):
+    def __init__(self, *sources, filter=None, merger=None):
+
         if len(sources) == 1 and isinstance(sources[0], list):
             sources = sources[0]
 
-        self.sources = sources
-        self._lengths = [None] * len(sources)
+        self.sources = [s.mutate() for s in sources if not s.ignore()]
+        self.filter = filter
+        self.merger = merger
+        self._lengths = [None] * len(self.sources)
+
+    def ignore(self):
+        return len(self.sources) == 0
 
     def mutate(self):
-        if len(self.sources) == 1:
+
+        if len(self.sources) == 1 and self.merger is None:
             return self.sources[0].mutate()
+
+        if len(self.sources) == 0:
+            return EmptySource()
+
         return self
 
     def _set_dataset(self, dataset):
@@ -56,32 +72,28 @@ class MultiSource(Source):
             self._lengths[i] = len(self.sources[i])
         return self._lengths[i]
 
+    def __repr__(self) -> str:
+        string = ",".join(repr(s) for s in self.sources)
+        return f"{self.__class__.__name__}({string})"
+
+    def save(self, path):
+        with open(path, "wb") as f:
+            for s in self.sources:
+                s.write(f)
+
+    def graph(self, depth=0):
+        print(" " * depth, self.__class__.__name__, self.merger)
+        for s in self.sources:
+            s.graph(depth + 3)
+
     def to_xarray(self, **kwargs):
-        import xarray as xr
+        return make_merger(self.merger, self.sources).to_xarray(**kwargs)
 
-        merged = self.sources[0].multi_merge(self.sources)
-        if merged is not None:
-            return merged.to_xarray(**kwargs)
+    def to_tfdataset(self, **kwargs):
+        return make_merger(self.merger, self.sources).to_tfdataset(**kwargs)
 
-        arrays = [s.to_xarray() for s in self.sources]
-
-        # Get values of scalar coordinates
-        values = defaultdict(set)
-        for a in arrays:
-            for v in a.coords:
-                if len(a[v].shape) == 0:
-                    vals = a[v].values
-                    # assert len(vals) == 1, (v, vals)
-                    values[v].add(float(vals))
-
-        # Promote scalar coordinates
-        promote = [name for name, count in values.items() if len(count) > 1]
-
-        if promote:
-            dims = dict(zip(promote, [1] * len(promote)))
-            arrays = [a.expand_dims(dims) for a in arrays]
-
-        return xr.merge(arrays)
+    def to_pandas(self, **kwargs):
+        return make_merger(self.merger, self.sources).to_pandas(**kwargs)
 
 
 source = MultiSource

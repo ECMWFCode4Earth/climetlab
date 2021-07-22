@@ -11,7 +11,7 @@
 
 import pytest
 
-from climetlab.utils import bytes_to_string
+from climetlab.utils import bytes_to_string, string_to_args
 from climetlab.utils.bbox import BoundingBox
 
 
@@ -71,8 +71,19 @@ def test_bbox():
         BoundingBox(north=90, west=1, south=30, east=1)
 
 
+def test_string_to_args():
+    assert string_to_args("a") == ("a", [], {})
+    assert string_to_args("a()") == ("a", [], {})
+    assert string_to_args("a(1,2)") == ("a", [1, 2], {})
+    assert string_to_args("a(1,p=2)") == ("a", [1], {"p": 2})
+    assert string_to_args("a_b(q=9,p=2)") == ("a_b", [], {"q": 9, "p": 2})
+    assert string_to_args("a-b(q=9,p=2)") == ("a-b", [], {"q": 9, "p": 2})
+    assert string_to_args("a-b(i,j)") == ("a-b", ["i", "j"], {})
+    assert string_to_args("a-b(i=2,j=9)") == ("a-b", [], {"i": 2, "j": 9})
+    assert string_to_args("merge()") == ("merge", [], {})
+
+
 if __name__ == "__main__":
-    for k, f in sorted(globals().items()):
-        if k.startswith("test_") and callable(f):
-            print(k)
-            f()
+    from climetlab.testing import main
+
+    main(globals())

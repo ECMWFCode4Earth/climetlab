@@ -46,60 +46,92 @@ Documentation
 
 **User Guide (TODO)**
 
+* :doc:`guide/overview`
 * :doc:`guide/howtos`
 * :doc:`guide/datasets`
 * :doc:`guide/sources`
+* :doc:`guide/mltools`
 * :doc:`guide/plotting`
+* :doc:`guide/caching`
+* :doc:`guide/settings`
+* :doc:`guide/pluginlist`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: User Guide
 
+   guide/overview
    guide/howtos
    guide/datasets
    guide/sources
+   guide/mltools
    guide/plotting
+   guide/caching
+   guide/settings
+   guide/pluginlist
 
-**Reference (TODO)**
+**Contributor Guide**
 
-* :doc:`reference/architecture`
-* :doc:`reference/datasets`
-* :doc:`reference/sources`
-* :doc:`reference/api`
-* :doc:`reference/settings`
-* :doc:`reference/caching`
-* :doc:`reference/plotting`
-* :doc:`reference/gallery`
+* :doc:`contributing/overview`
+* :doc:`contributing/datasets`
+* :doc:`contributing/sources`
+* :doc:`contributing/normalize`
+* :doc:`contributing/readers`
+* :doc:`contributing/plotting`
+* :doc:`contributing/todolist`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Contributor Guide
+
+   contributing/overview
+   contributing/datasets
+   contributing/sources
+   contributing/normalize
+   contributing/readers
+   contributing/plotting
+   contributing/todolist
+
+
+
+**Developer Guide**
+
+* :doc:`developer/overview`
+* :doc:`developer/architecture`
+* :doc:`developer/datasets`
+* :doc:`developer/sources`
+* :doc:`developer/api`
+* :doc:`developer/plotting`
+* :doc:`developer/gallery`
+* :doc:`developer/plugins`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Developer Guide
+
+   developer/overview
+   developer/architecture
+   developer/datasets
+   developer/sources
+   developer/api
+   developer/caching
+   developer/plotting
+   developer/gallery
+   developer/plugins
+
+**Reference**
+
+* :doc:`developer/api`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: Reference
 
-   reference/architecture
-   reference/datasets
-   reference/sources
-   reference/api
-   reference/settings
-   reference/caching
-   reference/plotting
-   reference/gallery
-
-**Contributing (TODO)**
-
-* :doc:`contributing/datasets`
-* :doc:`contributing/sources`
-* :doc:`contributing/plotting`
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Contributing
-
-   contributing/datasets
-   contributing/sources
-   contributing/plotting
+   developer/api
 
 
 License

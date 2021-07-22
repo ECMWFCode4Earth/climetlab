@@ -1,3 +1,5 @@
+.. _installing:
+
 Installing
 ==========
 
@@ -6,11 +8,32 @@ Installing
   you may need to substitute ``pip`` to ``pip3`` in the examples below.
 
 
-To install climetlab, simply run the following command:
+Pip install
+-----------
+
+To install CliMetLab, simply run the following command:
 
 .. code-block:: bash
 
   % pip install climetlab
+
+Conda install
+-------------
+
+No conda package has been created yet. `pip install climetlab` can be used in a conda environment.
+
+Mixing ``pip`` and ``conda`` could create some dependencies issues, we recommend installing as many dependencies as possible with conda, then install CliMetLab with ``pip``, `as recommended by the anaconda team <https://www.anaconda.com/blog/using-pip-in-a-conda-environment>`_.
+
+.. todo::
+
+  Create a conda package for CliMetLab on conda-forge, with clean dependencies.
+
+
+Troubleshooting
+---------------
+
+No matching distribution found for ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the installation fails with the following error:
 
@@ -27,6 +50,8 @@ you will need to make sure that you are using the latest version of ``pip``:
   % pip install --upgrade pip
   % pip install climetlab
 
+Module enum has no attribute 'IntFlag'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 If the installation fails with the following error:
 
 .. code-block:: html

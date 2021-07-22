@@ -10,7 +10,7 @@
 from climetlab.core.data import data_entries, get_data_entry
 from climetlab.core.ipython import display
 from climetlab.core.settings import SETTINGS
-from climetlab.helpers import helper
+from climetlab.wrappers import get_wrapper
 
 from .drivers.magics.driver import Driver
 from .options import Options
@@ -69,9 +69,7 @@ class Plot:
             data = [data]
 
         for d in data:
-            if getattr(d, "plot_map", None) is None:
-                d = helper(d)
-
+            d = get_wrapper(d)
             d.plot_map(self.driver)
 
         options = Options(kwargs)

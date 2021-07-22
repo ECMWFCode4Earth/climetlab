@@ -14,6 +14,7 @@ import datetime
 import numpy as np
 
 from climetlab import load_source
+from climetlab.testing import climetlab_file
 from climetlab.utils.dates import parse_date, to_datetime, to_datetime_list
 
 
@@ -82,7 +83,7 @@ def test_to_datetimes_list():
 
 
 def test_to_datetimes_list_grib():
-    source = load_source("file", "docs/examples/test.grib")
+    source = load_source("file", climetlab_file("docs/examples/test.grib"))
     for s in source:
         assert to_datetime_list(s) == [datetime.datetime(2020, 5, 13, 12, 0)]
 
@@ -100,7 +101,6 @@ def test_pandas_dates():
 
 
 if __name__ == "__main__":
-    for k, f in sorted(globals().items()):
-        if k.startswith("test_") and callable(f):
-            print(k)
-            f()
+    from climetlab.testing import main
+
+    main(globals())

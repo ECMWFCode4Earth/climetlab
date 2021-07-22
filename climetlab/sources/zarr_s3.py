@@ -65,9 +65,10 @@ class ZarrS3(Source):
         # self._ds = xr.concat(dslist, dim = 'head_time')
         # return self._ds
 
-        options = self.read_zarr_options()
+        # options = self.read_zarr_options()
 
-        concat_dim = options.get("concat_dim", "forecast_time")
+        # concat_dim = options.get("concat_dim", "forecast_time")
+        concat_dim = "forecast_time"  # TODO: fix me
 
         stores = [url_to_store(url) for url in urls]
 
@@ -97,7 +98,7 @@ class ZarrS3(Source):
             # self._ds = xr.open_mfdataset(stores, engine="zarr", combine='nested')
 
     def to_xarray(self):
-        self._ds = self.post_xarray_open_dataset_hook(self._ds)
+        # self._ds = self.post_xarray_open_dataset_hook(self._ds)
         return self._ds
 
 

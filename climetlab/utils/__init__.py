@@ -7,9 +7,25 @@
 # nor does it submit to any jurisdiction.
 #
 import inspect
+import json
+import re
+
+import requests
+
+try:
+    # There is a bug in tqdm that expects ipywidgets
+    # to be installed if running in a notebook
+    import ipywidgets  # noqa F401
+    from tqdm.auto import tqdm  # noqa F401
+except ImportError:
+    from tqdm import tqdm  # noqa F401
 
 
-def download_and_cache(url: str) -> str:
+def download_and_cache(
+    url: str,
+    update_if_out_of_date=False,
+    return_none_on_404=False,
+) -> str:
     """[summary]
 
     :param url: [description]
@@ -19,7 +35,23 @@ def download_and_cache(url: str) -> str:
     """
     from climetlab import load_source
 
-    return load_source("url", url).path
+    try:
+        return load_source("url", url).path
+    except requests.HTTPError as e:
+        if return_none_on_404:
+            if e.response is not None and e.response.status_code == 404:
+                return None
+        raise e
+
+
+def get_json(url: str, cache=False):
+    if cache:
+        with open(download_and_cache(url)) as f:
+            return json.loads(f.read())
+
+    r = requests.get(url)
+    r.raise_for_status()
+    return r.json()
 
 
 def bytes_to_string(n):
@@ -92,3 +124,40 @@ def consume_args(func1, func2, *args, **kwargs):
 
     # print('<=====', args_1, kwargs_1, args, kwargs)
     return args_1, kwargs_1, args, kwargs
+
+
+def string_to_args(s):
+    def typed(x):
+        try:
+            return int(x)
+        except ValueError:
+            pass
+
+        try:
+            return float(x)
+        except ValueError:
+            pass
+
+        return x
+
+    assert isinstance(s, str), s
+    m = re.match(r"([\w\-]+)(\((.*)\))?", s)
+    if not m:
+        raise ValueError(f"Invalid argument '{s}'")
+
+    name = m.group(1)
+
+    if m.group(2) is None:
+        return name, [], {}
+
+    args = []
+    kwargs = {}
+    bits = [x.strip() for x in m.group(3).split(",") if x.strip()]
+    for bit in bits:
+        if "=" in bit:
+            k, v = bit.split("=")
+            kwargs[k.strip()] = typed(v.strip())
+        else:
+            args.append(typed(bit))
+
+    return name, args, kwargs
