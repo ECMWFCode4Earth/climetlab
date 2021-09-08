@@ -7,15 +7,97 @@
 # nor does it submit to any jurisdiction.
 #
 
-from .base import FileSource
+
+import logging
+import os
+
+from climetlab.core.settings import SETTINGS
+from climetlab.readers import reader
+
+from . import Source
+
+LOG = logging.getLogger(__name__)
+
+
+class FileSource(Source, os.PathLike):
+
+    _reader_ = None
+    path = None
+    filter = None
+    merger = None
+
+    def mutate(self):
+        # Give a chance to directories and zip files
+        # to return a multi-source
+        source = self._reader.mutate_source()
+        if source not in (None, self):
+            source._parent = self
+            return source
+        return self
+
+    def ignore(self):
+        return self._reader.ignore()
+
+    @property
+    def _reader(self):
+        if self._reader_ is None:
+            self._reader_ = reader(self, self.path)
+        return self._reader_
+
+    def __iter__(self):
+        return iter(self._reader)
+
+    def __len__(self):
+        return len(self._reader)
+
+    def __getitem__(self, n):
+        return self._reader[n]
+
+    def sel(self, **kwargs):
+        return self._reader.sel(**kwargs)
+
+    def plot_map(self, **kwargs):
+        return self._reader.plot_map(**kwargs)
+
+    def to_xarray(self, **kwargs):
+        return self._reader.to_xarray(**kwargs)
+
+    def to_tfdataset(self, **kwargs):
+        return self._reader.to_tfdataset(**kwargs)
+
+    def to_pandas(self, **kwargs):
+        LOG.debug("Calling reader.to_pandas %s", self)
+        return self._reader.to_pandas(**kwargs)
+
+    def to_numpy(self, **kwargs):
+        return self._reader.to_numpy(**kwargs)
+
+    def to_metview(self, **kwargs):
+        return self._reader.to_metview(**kwargs)
+
+    def save(self, path):
+        return self._reader.save(path)
+
+    def write(self, f):
+        return self._reader.write(f)
+
+    def _attributes(self, names):
+        return self._reader._attributes(names)
+
+    def __repr__(self):
+        cache_dir = SETTINGS.get("cache-directory")
+        path = self.path.replace(cache_dir, "CACHE:")
+        return f"{self.__class__.__name__}({path},{self._reader.__class__.__name__})"
+
+    def __fspath__(self):
+        return self.path
 
 
 class File(FileSource):
-    def __init__(self, path):
+    def __init__(self, path, filter=None, merger=None):
         self.path = path
-
-    def read_csv_options(self):
-        return {}
+        self.filter = filter
+        self.merger = merger
 
 
 source = File

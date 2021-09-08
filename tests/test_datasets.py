@@ -50,8 +50,20 @@ def test_pandas_filter():
     assert len(irma) == 66
 
 
+def test_unknown_dataset():
+    with pytest.raises(NameError):
+        load_dataset("do-not-exist-lkj45a45qsdf3")
+
+
+def test_remote_dataset_from_climetlab_catalog():
+    load_dataset("sample-netcdf-data")
+
+
+def test_samples():
+    cml.load_dataset("meteonet-samples-radar")
+
+
 if __name__ == "__main__":
-    for k, f in sorted(globals().items()):
-        if k.startswith("test_") and callable(f):
-            print(k)
-            f()
+    from climetlab.testing import main
+
+    main(globals())

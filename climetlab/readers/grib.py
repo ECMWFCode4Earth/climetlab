@@ -12,10 +12,12 @@ import logging
 
 import eccodes
 
+from climetlab.core import Base
+
 # from climetlab.decorators import dict_args
 from climetlab.utils.bbox import BoundingBox
 
-from . import MultiReaders, Reader
+from . import Reader
 
 LOG = logging.getLogger(__name__)
 
@@ -78,7 +80,7 @@ def cb(r):
     print("Delete", r)
 
 
-class GribField:
+class GribField(Base):
     def __init__(self, *, handle=None, reader=None, offset=None):
         self._handle = handle
         self._reader = reader
@@ -157,9 +159,6 @@ class GribField:
         m["shape"] = self.shape
         return m
 
-    def helper(self):
-        return self
-
     def datetime(self):
         date = self.handle.get("date")
         time = self.handle.get("time")
@@ -218,12 +217,17 @@ class GRIBFilter:
         return GRIBIterator(self.path)
 
 
-class MultiGribReaders(MultiReaders):
-    engine = "cfgrib"
-    backend_kwargs = {"squeeze": False}
+# class MultiGribReaders(GriddedMultiReaders):
+#     engine = "cfgrib"
+#     backend_kwargs = {"squeeze": False}
 
 
 class GRIBReader(Reader):
+    appendable = True  # GRIB messages can be added to the same file
+
+    open_mfdataset_backend_kwargs = {"squeeze": False}
+    open_mfdataset_engine = "cfgrib"
+
     def __init__(self, source, path):
         super().__init__(source, path)
         self._fields = None
@@ -251,24 +255,23 @@ class GRIBReader(Reader):
         return len(self._items())
 
     def to_xarray(self, **kwargs):
-        # So we use the same code
-        return MultiGribReaders([self]).to_xarray(**kwargs)
-        # import xarray as xr
-
-        # params = self.source.cfgrib_options()
-        # ds = xr.open_dataset(self.path, engine="cfgrib", **params)
-        # return self.source.post_xarray_open_dataset_hook(ds)
-
-    # @dict_args
-    # def sel(self, **kwargs):
-    #     return GRIBFilter(self, kwargs)
+        return type(self).to_xarray_multi([self.path], **kwargs)
 
     @classmethod
-    def multi_merge(cls, readers):
-        assert all(isinstance(r, GRIBReader) for r in readers)
-        return MultiGribReaders(readers)
+    def to_xarray_multi(cls, paths, **kwargs):
+        import xarray as xr
+
+        options = dict(
+            backend_kwargs={"squeeze": False},
+        )
+        options.update(kwargs)
+        options["engine"] = "cfgrib"
+        return xr.open_mfdataset(
+            paths,
+            **options,
+        )
 
 
-def reader(source, path, magic):
+def reader(source, path, magic, deeper_check):
     if magic[:4] == b"GRIB":
         return GRIBReader(source, path)

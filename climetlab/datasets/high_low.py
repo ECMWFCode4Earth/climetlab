@@ -62,7 +62,7 @@ SAMPLES = [
 
 
 class HighLow(Dataset):
-    def _load(self, **req):
+    def __init__(self, **req):
         self._fields = []
         for date, area, label in SAMPLES:
 
@@ -92,8 +92,7 @@ class HighLow(Dataset):
             return titles[i]
         return "%s (%s%%)" % (titles[i], int(label[i] * 100 + 0.5))
 
-    # load_data is used by keras
-    def load_data(self, normalise=True, test_size=0.5, shuffle=True, fields=False):
+    def _load_data(self, normalise=True):
         data = []
         for field, label in self._fields:
             if normalise:
@@ -101,6 +100,11 @@ class HighLow(Dataset):
             else:
                 array = field.to_numpy()
             data.append((array, label, field))
+        return data
+
+    # load_data is used by keras
+    def load_data(self, normalise=True, test_size=0.5, shuffle=True, fields=False):
+        data = self._load_data(normalise)
 
         if shuffle:
             random.shuffle(data)
@@ -122,6 +126,21 @@ class HighLow(Dataset):
             return (x_train, y_train, f_train), (x_test, y_test, f_test)
 
         return (x_train, y_train), (x_test, y_test)
+
+    def to_tfdataset(self, split=None):
+        import tensorflow as tf
+
+        (x_train, y_train), (x_test, y_test) = self.load_data()
+
+        # return dict(
+        #     train=tf.data.Dataset.from_tensors((x_train, y_train)),
+        #     test=tf.data.Dataset.from_tensors((x_test, y_test)),
+        # )
+
+        return (
+            tf.data.Dataset.from_tensors((x_train, y_train)),
+            tf.data.Dataset.from_tensors((x_test, y_test)),
+        )
 
 
 dataset = HighLow

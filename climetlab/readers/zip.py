@@ -8,53 +8,83 @@
 #
 
 import os
+import stat
 from zipfile import ZipFile
 
-from . import Reader
-from . import reader as find_reader
+from climetlab import load_source
+
+from .archive import ArchiveReader
+from .csv import CSVReader
 
 
-class ZIPReader(Reader):
+class InfoWrapper:
+    """
+    A class so that ZipInfo has the same interface as TarInfo
+    """
+
+    def __init__(self, member):
+        self.member = member
+        self.file_or_directory = True
+        # See https://stackoverflow.com/questions/35782941/archiving-symlinks-with-python-zipfile
+        if member.create_system == 3:  # Unix
+            unix_mode = member.external_attr >> 16
+            self.file_or_directory = stat.S_ISDIR(unix_mode) or stat.S_ISREG(unix_mode)
+
+    @property
+    def name(self):
+        return self.member.filename
+
+    def isdir(self):
+        return self.file_or_directory and self.member.filename.endswith("/")
+
+    def isfile(self):
+        return self.file_or_directory and not self.isdir()
+
+
+class ZIPReader(ArchiveReader):
     def __init__(self, source, path):
         super().__init__(source, path)
 
-        with ZipFile(path, "r") as z:
-            self._content = z.namelist()
+        self._mutate = None
 
-        if len(self._content) == 1:
-            _, ext = os.path.splitext(self._content[0])
-            if ext in (".csv", ".txt"):
-                return  # Pandas can read zipped files directly
+        with ZipFile(path, "r") as zip:
+            members = zip.infolist()
 
-        extract_path = self.source.cache_file(path, extension=".d")
-        if not os.path.exists(extract_path):
-            tmp = extract_path + ".tmp"
-            with ZipFile(path, "r") as z:
-                z.extractall(tmp)
-            os.rename(tmp, extract_path)
+            if len(members) == 1:
 
-        self.path = extract_path
+                _, ext = os.path.splitext(members[0].filename)
+                if ext in (".csv",):
+                    self._mutate = CSVReader(source, path, compression="zip")
+                    return  # Pandas can read zipped files directly
+
+            if ".zattrs" in members:
+                return  # Zarr can read zipped files directly
+
+            self.expand(zip, members)
+
+    def check(self, member):
+        return super().check(InfoWrapper(member))
 
     def mutate(self):
-        if os.path.isdir(self.path):
-            return find_reader(self.source, self.path)
-        return self
 
-    def to_pandas(self, **kwargs):
+        if self._mutate:
+            return self._mutate.mutate()
 
-        _, ext = os.path.splitext(self._content[0])
-        if ext not in (".csv", ".txt"):
-            raise NotImplementedError("File type", ext)
+        return super().mutate()
 
-        import pandas
+    def mutate_source(self):
+        # zarr can read data from a zip file
+        if ".zattrs" in self._content:
+            return load_source("zarr", self.path)
 
-        options = dict(compression="zip")
-        options.update(self.source.read_csv_options())
-        options.update(kwargs)
-
-        return pandas.read_csv(self.path, **options)
+        return None
 
 
-def reader(source, path, magic):
-    if magic[:4] == b"PK\x03\x04":
+EXTENSIONS_TO_SKIP = (".npz",)  # Numpy arrays
+
+
+def reader(source, path, magic, deeper_check):
+    _, extension = os.path.splitext(path)
+
+    if magic[:4] == b"PK\x03\x04" and extension not in EXTENSIONS_TO_SKIP:
         return ZIPReader(source, path)

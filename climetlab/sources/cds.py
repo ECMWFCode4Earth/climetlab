@@ -7,13 +7,12 @@
 # nor does it submit to any jurisdiction.
 #
 
-import os
-
 import cdsapi
 
 from climetlab.normalize import normalize_args
 
-from .base import APIKeyPrompt, FileSource
+from .file import FileSource
+from .prompt import APIKeyPrompt
 
 APIRC = "key: {key}\nurl: https://cds.climate.copernicus.eu/api/v2"
 
@@ -53,7 +52,10 @@ def client():
         raise
 
 
-EXTENSIONS = {"grib": ".grib", "netcdf": ".nc"}
+EXTENSIONS = {
+    "grib": ".grib",
+    "netcdf": ".nc",
+}
 
 
 class CDSRetriever(FileSource):
@@ -64,24 +66,40 @@ class CDSRetriever(FileSource):
 
     def __init__(self, dataset, **kwargs):
         request = self.request(**kwargs)
+
+        def retrieve(target, args):
+            client().retrieve(args[0], args[1], target)
+
         self.path = self.cache_file(
-            request,
+            retrieve,
+            (dataset, request),
             extension=EXTENSIONS.get(request.get("format"), ".cache"),
         )
-        if not os.path.exists(self.path):
-            client().retrieve(dataset, request, self.path + ".tmp")
-            os.rename(self.path + ".tmp", self.path)
 
     @normalize_args(date="date-list(%Y-%m-%d)", area="bounding-box(list)")
     def request(self, **kwargs):
         return kwargs
 
-    def read_csv_options(self):
-        return dict(
+    def to_pandas(self, **kwargs):
+        pandas_read_csv_kwargs = dict(
             comment="#",
             parse_dates=["report_timestamp"],
             skip_blank_lines=True,
             compression="zip",
+        )
+
+        pandas_read_csv_kwargs.update(kwargs.get("pandas_read_csv_kwargs", {}))
+
+        odc_read_odb_kwargs = dict(
+            # TODO
+        )
+
+        odc_read_odb_kwargs.update(kwargs.get("odc_read_odb_kwargs", {}))
+
+        return super().to_pandas(
+            pandas_read_csv_kwargs=pandas_read_csv_kwargs,
+            odc_read_odb_kwargs=odc_read_odb_kwargs,
+            **kwargs,
         )
 
 

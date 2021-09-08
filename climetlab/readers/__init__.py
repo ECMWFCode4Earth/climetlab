@@ -7,16 +7,26 @@
 # nor does it submit to any jurisdiction.
 #
 
+import logging
 import os
-import warnings
 import weakref
 from importlib import import_module
 
+from climetlab.core import Base
 from climetlab.decorators import locked
 
+LOG = logging.getLogger(__name__)
 
-class Reader:
+
+class Reader(Base, os.PathLike):
+
+    appendable = False  # Set to True if the data can be appened to and existing file
+    binary = True
+
     def __init__(self, source, path):
+
+        LOG.debug("Reader for %s is %s", path, self.__class__.__name__)
+
         self._source = weakref.ref(source)
         self.path = path
 
@@ -24,56 +34,50 @@ class Reader:
     def source(self):
         return self._source()
 
+    @property
+    def filter(self):
+        return self.source.filter
+
+    @property
+    def merger(self):
+        return self.source.merger
+
     def mutate(self):
         # Give a chance to `directory` or `zip` to change the reader
         return self
 
+    def mutate_source(self):
+        # The source may ask if it needs to mutate
+        return None
+
+    def ignore(self):
+        # Used by multi-source
+        return False
+
     def sel(self, *args, **kwargs):
         raise NotImplementedError()
 
-    @classmethod
-    def multi_merge(cls, readers):
-        return None
+    def cache_file(self, *args, **kwargs):
+        return self.source.cache_file(*args, **kwargs)
 
+    def save(self, path):
+        mode = "wb" if self.binary else "w"
+        with open(path, mode) as f:
+            self.write(f)
 
-class MultiReaders:
-    backend_kwargs = {}
+    def write(self, f):
+        if not self.appendable:
+            assert f.tell() == 0
+        mode = "rb" if self.binary else "r"
+        with open(self.path, mode) as g:
+            while True:
+                chunk = g.read(1024 * 1024)
+                if not chunk:
+                    break
+                f.write(chunk)
 
-    def __init__(self, readers):
-        self.readers = readers
-
-    def to_xarray(self, **kwargs):
-        import xarray as xr
-
-        readers = {r.path: r for r in self.readers}
-
-        def preprocess(ds):
-            if (
-                len(readers) == 1
-            ):  # encoding["source"] is not defined if there is only one file
-                r = self.readers[0]
-            else:
-                r = readers[ds.encoding["source"]]
-            return r.source.post_xarray_open_dataset_hook(ds)
-
-        options = None
-        for r in self.readers:
-            opts = r.source.cfgrib_options()
-            if options is None:
-                options = opts
-            else:
-                assert options == opts, f"{options} != {opts}"
-
-        options.update(kwargs)
-        options.setdefault("backend_kwargs", {})
-        options["backend_kwargs"].update(self.backend_kwargs)
-
-        return xr.open_mfdataset(
-            [r.path for r in self.readers],
-            engine=self.engine,
-            preprocess=preprocess,
-            **options,
-        )
+    def __fspath__(self):
+        return self.path
 
 
 _READERS = {}
@@ -88,28 +92,37 @@ def _readers():
             if path.endswith(".py") and path[0] not in ("_", "."):
                 name, _ = os.path.splitext(path)
                 try:
-                    _READERS[name] = import_module(f".{name}", package=__name__).reader
-                except Exception as e:
-                    warnings.warn(f"Error loading helper {name}: {e}")
+                    module = import_module(f".{name}", package=__name__)
+                    if hasattr(module, "reader"):
+                        _READERS[name] = module.reader
+                except Exception:
+                    LOG.exception("Error loading reader %s", name)
     return _READERS
 
 
 def reader(source, path):
 
+    assert isinstance(path, str), source
+
     if os.path.isdir(path):
         from .directory import DirectoryReader
 
-        return DirectoryReader(source, path)
+        return DirectoryReader(source, path).mutate()
+    LOG.debug("Reader for %s", path)
 
     with open(path, "rb") as f:
         magic = f.read(8)
 
-    for name, r in _readers().items():
-        try:
-            reader = r(source, path, magic)
+    LOG.debug("Looking for a reader for %s (%s)", path, magic)
+
+    for deeper_check in (False, True):
+        # We do two passes, the second one
+        # allow the plugin to look deeper in the file
+        for name, r in _readers().items():
+            reader = r(source, path, magic, deeper_check)
             if reader is not None:
                 return reader.mutate()
-        except Exception as e:
-            warnings.warn(f"Error calling reader '{name}': {e}")
 
-    raise ValueError(f"Cannot find a reader for file '{path}' (magic {magic})")
+    from .unknown import Unknown
+
+    return Unknown(source, path, magic)
